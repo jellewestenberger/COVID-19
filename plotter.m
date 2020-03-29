@@ -1,6 +1,6 @@
 clear all 
 reports=dir("csse_covid_19_data\csse_covid_19_daily_reports\*.csv");
-country="Netherlands";
+country="Germany";
 timestampsfiles=[];
 for j=1:size(reports,1)
     timestamp=split(reports(1).name,'.csv');
@@ -110,13 +110,13 @@ end
 database.(country).LastUpdate=datetime(max(timel),'ConvertFrom','epochtime');
 
 save("Database.mat",'database');
-% 
-% figure()
-% plot(database.(country).timestamps,database.(country).confirmed)
-% hold on 
-% plot(database.(country).timestamps,database.(country).deaths,'r')
-% hold on 
-% plot(database.(country).timestamps,database.(country).recovered,'g')
-% title(country);
-% grid on
-% legend("Confirmed Cases","Deaths","Recovered")
+
+figure()
+plot(database.(country).(country).timestamps,database.(country).(country).confirmed)
+hold on 
+plot(database.(country).(country).timestamps,database.(country).(country).deaths,'r')
+hold on 
+plot(database.(country).(country).timestamps,database.(country).(country).recovered,'g')
+title(country);
+grid on
+legend("Confirmed Cases","Deaths","Recovered")
