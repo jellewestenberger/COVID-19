@@ -1,12 +1,17 @@
-clear all 
+clear all
+disp("Checking for updates");
+%% make sure to have https://github.com/CSSEGISandData/COVID-19.git as a remote called origin (or modify remote name at fetch below) 
+!git fetch origin
+!git checkout origin/master csse_covid_19_data\ 
+
 reports=dir("csse_covid_19_data\csse_covid_19_daily_reports\*.csv");
 country="Netherlands";
 
 %% Check whether country has been loaded in database before and if there is new data available
 timestampsfiles=[];
 for j=1:size(reports,1)
-    timestamp=split(reports(1).name,'.csv');
-    timestamp=datetime(timestamp{1},'InputFormat','MM-dd-yyy');
+    timestamp=split(reports(j).name,'.csv');
+    timestamp=datetime(timestamp{1},'InputFormat','MM-dd-yyyy');
     timestampsfiles=[timestampsfiles;j,posixtime(timestamp)]; % time stamps of reports csv
 end
 if isfile('Database.mat')
@@ -32,6 +37,7 @@ timestampfiles=timestampsfiles(newfiles);
 
 for j=1:size(reports,1)
     filename=reports(j).name;
+    fprintf("New data: %s\n",filename);
     filepath=strcat(reports(j).folder,"\",filename);
     alldata=readtable(filepath);
     i=find(ismember(alldata.Country_Region,country)); %find entries that correspond with desired country
@@ -62,6 +68,10 @@ for j=1:size(reports,1)
                 dummy=2; %for debugging brakepoint only
             end
             province=replace(datprov.Province_State{1}," ",""); %remove white spaces as they cannot be used as fieldnames
+            province=replace(province,",","_");
+            province=replace(province,".","");
+            province=split(province,"(");
+            province=province{1};
             if strcmp(province,'') % if not province name is given use the country name
                 province=country;
             end
@@ -108,12 +118,38 @@ database.(country).LastUpdate=datetime(max(timel),'ConvertFrom','epochtime');
 
 save("Database.mat",'database');
 
+tl=database.(country).(country).timestamps;
+tl=tl-tl(1);
+tl=tl./(3600*24);
+meas=1:length(tl); %measurment range on which lsq is based
+tl_meas=tl(meas);
+y=database.(country).(country).confirmed(meas);
+tl_extra=tl_meas(end):1:tl(end)+5;
+order=4;
+A=zeros(length(y),order+1);
+% A(:,1)=ones(length(y),1);
+for i=0:order
+   A(:,i+1)=tl_meas.^(i);
+end
+est=(A'*A)^(-1)*A'*y;
+y_curve=A*est;
+B=[];
+y_extra=0;
+for n=0:order
+y_extra=y_extra+est(n+1).*tl_extra.^(n);
+end
+
+close all
 figure()
-plot(database.(country).(country).timestamps,database.(country).(country).confirmed)
+plot(tl,database.(country).(country).confirmed)
 hold on 
-plot(database.(country).(country).timestamps,database.(country).(country).deaths,'r')
+plot(tl_meas,y_curve);
 hold on 
-plot(database.(country).(country).timestamps,database.(country).(country).recovered,'g')
+plot(tl_extra,y_extra,'--');
+hold on
+plot(tl,database.(country).(country).deaths,'r')
+hold on 
+plot(tl,database.(country).(country).recovered,'g')
 title(country);
 grid on
-legend("Confirmed Cases","Deaths","Recovered")
+legend("Confirmed Cases","Fitted curve","extrapolated","Deaths","Recovered")
