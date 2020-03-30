@@ -1,19 +1,8 @@
 clear all
-disp("Checking for updates");
-%% make sure to have https://github.com/CSSEGISandData/COVID-19.git as a remote called origin (or modify remote name at fetch below) 
-!git fetch origin
-!git checkout origin/master csse_covid_19_data\ 
 
-reports=dir("csse_covid_19_data\csse_covid_19_daily_reports\*.csv");
 country="Netherlands";
-
 %% Check whether country has been loaded in database before and if there is new data available
-timestampsfiles=[];
-for j=1:size(reports,1)
-    timestamp=split(reports(j).name,'.csv');
-    timestamp=datetime(timestamp{1},'InputFormat','MM-dd-yyyy');
-    timestampsfiles=[timestampsfiles;j,posixtime(timestamp)]; % time stamps of reports csv
-end
+
 if isfile('Database.mat')
     load('Database.mat');
     if isfield(database,country)
@@ -24,9 +13,30 @@ if isfile('Database.mat')
     end
 else
    database.(country).LastUpdate=[];
+   database.LastRemoteUpdate=datetime(0,'ConvertFrom','epochtime');
    LastUpdate=0;
 end
+
+%% make sure to have https://github.com/CSSEGISandData/COVID-19.git as a remote called origin (or modify remote name at fetch below) 
+curtime=datetime(now,'ConvertFrom','datenum');
+lastupdatetime=posixtime(database.LastRemoteUpdate);
+if (posixtime(curtime)-lastupdatetime)>3600 %only update when more than an hour has passed since the last update
+    disp("Checking for updates");
+    !git fetch origin
+    !git checkout origin/master csse_covid_19_data\ 
+    database.LastRemoteUpdate=curtime;
+end
+reports=dir("csse_covid_19_data\csse_covid_19_daily_reports\*.csv");
+
+
+timestampsfiles=[];
+for j=1:size(reports,1)
+    timestamp=split(reports(j).name,'.csv');
+    timestamp=datetime(timestamp{1},'InputFormat','MM-dd-yyyy');
+    timestampsfiles=[timestampsfiles;j,posixtime(timestamp)]; % time stamps of reports csv
+end
 %%
+
 
 newfiles=find(timestampsfiles(:,2)>LastUpdate); %filter new reports only
 reports=reports(newfiles);
