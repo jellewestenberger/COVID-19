@@ -135,7 +135,7 @@ meas=1:length(tl); %measurment range on which lsq is based
 tl_meas=tl(meas);
 y=database.(country).(country).confirmed(meas);
 tl_extra=tl_meas(end):1:tl(end)+5;
-order=4;
+order=3;
 A=zeros(length(y),order+1);
 % A(:,1)=ones(length(y),1);
 for i=0:order
@@ -153,6 +153,8 @@ close all
 figure()
 plot(tl,database.(country).(country).confirmed)
 hold on 
+plot(tl,database.(country).(country).confirmed-database.(country).(country).deaths-database.(country).(country).recovered)
+hold on 
 plot(tl_meas,y_curve);
 hold on 
 plot(tl_extra,y_extra,'--');
@@ -162,4 +164,4 @@ hold on
 plot(tl,database.(country).(country).recovered,'g')
 title(country);
 grid on
-legend("Confirmed Cases","Fitted curve","extrapolated","Deaths","Recovered")
+legend("Confirmed Cases","Active","Fitted curve","extrapolated","Deaths","Recovered")
